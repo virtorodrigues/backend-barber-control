@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import multerConfig from './config/multer';
 
-import ProvidersController from './app/controllers/ProvidersController';
+import ProviderController from './app/controllers/ProviderController';
 import UserController from './app/controllers/UserController';
 import SessionController from './app/controllers/SessionController';
 import FileController from './app/controllers/FileController';
@@ -22,10 +22,11 @@ routes.use(authMiddleware);
 
 routes.put('/users', UserController.update);
 
-routes.get('/providers', ProvidersController.index);
+routes.get('/providers', ProviderController.index);
 
 routes.post('/appointments', AppointmentController.store);
 routes.get('/appointments', AppointmentController.index);
+routes.delete('/appointments/:id', AppointmentController.delete);
 
 routes.get('/schedule', ScheduleController.index);
 

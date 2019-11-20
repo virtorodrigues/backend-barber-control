@@ -1,7 +1,7 @@
 import * as Yup from 'yup';
-import { startOfHour, parseISO, isBefore, format } from 'date-fns';
+import { startOfHour, parseISO, isBefore, format, subHours } from 'date-fns';
 import pt from 'date-fns/locale/pt';
-import Appointments from '../models/Appointment';
+import Appointment from '../models/Appointment';
 import Notification from '../schemas/Notification';
 import User from '../models/User';
 import File from '../models/File';
@@ -10,8 +10,8 @@ class AppointmentController {
   async index(req, res) {
     const { page = 1 } = req.query;
 
-    const appointments = await Appointments.findAll({
-      where: { user_id: req.userId },
+    const appointments = await Appointment.findAll({
+      where: { user_id: req.userId, canceled_at: null },
       order: ['date'],
       limit: 20,
       offset: (page - 1) * 20,
@@ -85,7 +85,7 @@ class AppointmentController {
      * Check date availability
      */
 
-    const isAvailability = await Appointments.findOne({
+    const isAvailability = await Appointment.findOne({
       where: {
         provider_id,
         canceled_at: null,
@@ -102,7 +102,7 @@ class AppointmentController {
     /**
      * Create appointments
      */
-    const appointments = await Appointments.create({
+    const appointments = await Appointment.create({
       user_id: req.userId,
       date: hoursStart,
       provider_id,
@@ -124,6 +124,36 @@ class AppointmentController {
     });
 
     return res.json(appointments);
+  }
+
+  async delete(req, res) {
+    const appointment = await Appointment.findByPk(req.params.id);
+
+    /**
+     * Check if user it's same
+     */
+    if (req.userId !== appointment.user_id) {
+      return res.status(401).json({
+        error: "You don't have permission to cancel this appointment.",
+      });
+    }
+
+    /**
+     * Check if now is 2hr before
+     */
+    const dateWithSub = subHours(appointment.date, 2);
+
+    if (isBefore(dateWithSub, new Date())) {
+      return res.status(401).json({
+        error: 'You can only cancel appointments 2 hours in advanced.',
+      });
+    }
+
+    appointment.canceled_at = new Date();
+
+    await appointment.save();
+
+    return res.json(appointment);
   }
 }
 
